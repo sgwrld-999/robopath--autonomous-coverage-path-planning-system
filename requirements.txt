@@ -1,0 +1,17 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+
+# Database and ORM
+sqlalchemy
+pydantic
+
+
+# Utilities
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.2.1
+httpx==0.27.0
+
+# Optional for logging (nice to have)
+structlog==24.2.0

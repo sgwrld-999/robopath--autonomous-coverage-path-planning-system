@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wall Coverage Planner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wall Coverage Planner</h1>
+            <p>Autonomous Wall-Finishing Robot Trajectory Visualization</p>
+        </header>
+
+        <main>
+            <section class="controls">
+                <h2>Configuration</h2>
+                <form id="planner-form">
+                    <div class="input-group">
+                        <h3>Wall Dimensions (m)</h3>
+                        <label>Width: <input type="number" id="wall-width" value="5" step="0.1" required></label>
+                        <label>Height: <input type="number" id="wall-height" value="5" step="0.1" required></label>
+                    </div>
+
+                    <div class="input-group">
+                        <h3>Planner Parameters</h3>
+                        <label>Tool Width (m): <input type="number" id="tool-width" value="0.5" step="0.05" required></label>
+                        <label>Overlap (0-0.5): <input type="number" id="overlap" value="0.1" step="0.05" min="0" max="0.5" required></label>
+                        <label>Safe Margin (m): <input type="number" id="safe-margin" value="0.1" step="0.05" required></label>
+                    </div>
+
+                    <div class="input-group">
+                        <h3>Obstacles</h3>
+                        <div id="obstacles-list">
+                            <!-- Dynamic obstacle inputs -->
+                        </div>
+                        <button type="button" id="add-obstacle-btn" class="secondary-btn">+ Add Obstacle</button>
+                    </div>
+
+                    <button type="submit" class="primary-btn">Generate Trajectory</button>
+                </form>
+
+                <div class="playback-controls" style="display: none;">
+                    <h3>Playback</h3>
+                    <div class="playback-buttons">
+                        <button id="play-btn">Play</button>
+                        <button id="pause-btn">Pause</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                    <input type="range" id="playback-slider" min="0" value="0" step="1">
+                    <span id="playback-status">Frame: 0 / 0</span>
+                </div>
+                
+                <div id="metadata-display" style="display: none;">
+                    <h3>Results</h3>
+                    <p>Path Length: <span id="meta-length">0</span> m</p>
+                    <p>Coverage: <span id="meta-coverage">0</span>%</p>
+                    <p>Waypoints: <span id="meta-waypoints">0</span></p>
+                </div>
+            </section>
+
+            <section class="visualization">
+                <canvas id="wall-canvas"></canvas>
+            </section>
+        </main>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
