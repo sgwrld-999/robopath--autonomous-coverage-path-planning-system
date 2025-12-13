@@ -1,414 +1,290 @@
-# 10x-backend-assignment
+# RoboPath: Autonomous Coverage Path Planning System
 
+A production-ready full-stack system for autonomous robot path planning, featuring complete coverage algorithms, real-time visualization, and a RESTful API.
 
-## **1. Problem Formulation**
+## Project Overview
 
-### **1.1 Understanding the Assignment**
+RoboPath is an end-to-end system designed for autonomous wall-finishing robots that need to cover surface areas efficiently while strictly avoiding obstacles. The project serves as a demonstration of complex algorithm implementation within a clean, production-grade software architecture.
 
-The assignment described a backend system for a robot that performs **wall finishing**.
-The backend must:
+**Key Technical Demonstrations:**
 
-* Accept **wall dimensions** and **obstacles**
-* Compute a **complete coverage path** while avoiding obstacles
-* Persist the output in a **database**
-* Expose the result through a **clean API**
-* Provide clear logging and maintainable structure
+  * **Algorithm Design:** Custom boustrophedon (lawnmower) coverage algorithm with geometric interval subtraction.
+  * **Backend Engineering:** Asynchronous FastAPI application utilizing dependency injection and proper routing.
+  * **Database Design:** Relational mapping using SQLAlchemy with JSON field optimization for complex spatial data.
+  * **Frontend Development:** Interactive trajectory visualizer using the HTML5 Canvas API.
+  * **Testing:** Comprehensive suite of API and integration tests.
 
-However, the assignment did **not** specify:
+-----
 
-* How obstacles should be represented
-* How to generate the coverage path
-* How the planner should work internally
-* How data should be stored
-* Whether coordinates are absolute or relative
-* How much safety margin the robot requires
-* What the expected coverage algorithm is
+## Key Features
 
-Therefore, the first task was to transform this high-level description into a **precise technical problem**.
+### Core Capabilities
 
----
+  * **Complete Coverage Planning:** Implements a boustrophedon algorithm to ensure 100% reachable surface coverage.
+  * **Collision Avoidance:** automatically computes forbidden zones and inflates obstacles based on tool safety margins.
+  * **Optimized Pathfinding:** Minimizes non-working transitions and redundant movements.
+  * **Real-time Visualization:** interactive, canvas-based playback of the generated robot trajectory.
+  * **Persistent Storage:** SQLite database (migratable to PostgreSQL) using SQLAlchemy ORM.
+  * **RESTful API:** clean endpoint design with strict Pydantic data validation.
 
-### **1.2 Breaking Down the Problem**
+### Technical Highlights
 
-I decomposed the system into four major components:
+  * Interval subtraction algorithm for efficient lane segmentation.
+  * Rectangle merging logic for obstacle preprocessing.
+  * Automatic orientation selection (vertical vs. horizontal sweep).
+  * Configurable tool width, overlap, and safety margins.
+  * Calculation of path length and coverage fraction metrics.
 
-1. **Planner (Core Algorithm)**
-    The logic that computes collision-free, complete coverage of the wall.
+-----
 
-2. **Backend Server (FastAPI)**
-    Accepts requests, validates input, invokes planner, returns results.
+## Technical Stack
 
-3. **Database Layer (SQLAlchemy + SQLite)**
-    Persists trajectories, obstacles, metadata, and planner parameters.
+### Backend
 
-4. **API Models & Router**
-    Defines request/response schemas and the public interface.
+  * **Framework:** FastAPI (Async/Await)
+  * **ORM:** SQLAlchemy (Declarative Models)
+  * **Validation:** Pydantic v2
+  * **Database:** SQLite (Development), PostgreSQL-ready
+  * **Testing:** pytest, HTTPX
 
-This decomposition ensured that each component has a clear responsibility.
+### Frontend(VIBE-CODED)
 
----
+  * **Language:** Vanilla JavaScript (ES6+)
+  * **Rendering:** HTML5 Canvas API (2D Context)
+  * **Styling:** CSS3 (Flexbox/Grid)
 
-### **1.3 Requirements & Constraints Identified**
+### DevOps & Tooling
 
-From the problem description, I extracted key requirements:
+  * **Logging:** Middleware-based request timing and error logging
+  * **CORS:** Configurable cross-origin resource sharing
+  * **Static Files:** Integrated static file serving for the frontend
 
-#### **Functional**
+-----
 
-* Input: wall size, obstacles, planner parameters
-* Output: ordered waypoints for brushing
-* Must avoid obstacles
-* Must cover all reachable wall area
-* Must save planner output to DB
-* Must expose API to retrieve trajectories
+## System Architecture
 
-#### **Technical**
+The system follows a layered architecture pattern, separating the presentation layer, API layer, domain logic, and data persistence.
 
-* Use FastAPI
-* Use a database (SQLite for local development)
-* Clean logs
-* Modularity and minimal code footprint
-* Suitable for extension later
-
-#### **Constraints**
-
-* Obstacles may lie anywhere
-* Planner must tolerate ambiguous inputs
-* Tool width and overlap affect lane spacing
-* Robot requires safety margin (inflation around obstacles)
-
-#### **Assumptions Made**
-
-Because the assignment intentionally leaves some details open, I made the following assumptions:
-
-* The wall coordinate system starts at **(0, 0)** — bottom-left corner.
-* Obstacles are axis-aligned rectangles.
-* Tool width (S) is given and lanes are spaced by
-  `lane_spacing = S * (1 - overlap)`
-* Obstacles must be *inflated* by a safe margin to avoid collisions.
-* Boustrophedon (lawnmower) coverage is the intended pattern.
-* SQLite is sufficient for storing trajectories for this assignment.
-
-These assumptions enabled me to convert ambiguous statements into clear tasks.
-
----
-
-## **2. Solution Approach**
-
-### **2.1 System Architecture**
-
-The system follows a clean **three-layer architecture**:
-
-```
-[ API Layer (FastAPI) ]
-          |
-[ Planner Service ]
-          |
-[ Database Layer (SQLAlchemy + SQLite) ]
+```text
+┌─────────────────────────────────────────────────────┐
+│                   Client (Browser)                  │
+│         Interactive Visualization Interface         │
+└─────────────────┬───────────────────────────────────┘
+                  │ HTTP/JSON
+┌─────────────────▼───────────────────────────────────┐
+│             FastAPI Application                     │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  Routers (API Endpoints)                     │   │
+│  │  - POST /api/trajectories/                   │   │
+│  │  - GET  /api/trajectories/                   │   │
+│  │  - GET  /api/trajectories/{id}               │   │
+│  └──────────────┬───────────────────────────────┘   │
+│                 │                                   │
+│  ┌──────────────▼───────────────────────────────┐   │
+│  │  Coverage Planner Service                    │   │
+│  │  - Obstacle preprocessing                    │   │
+│  │  - Lane generation                           │   │
+│  │  - Interval subtraction                      │   │
+│  │  - Waypoint discretization                   │   │
+│  └──────────────┬───────────────────────────────┘   │
+│                 │                                   │
+│  ┌──────────────▼───────────────────────────────┐   │
+│  │  Database Layer (SQLAlchemy)                 │   │
+│  │  - Trajectory persistence                    │   │
+│  │  - JSON field optimization                   │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
 ```
 
-Each layer has a single, well-defined responsibility.
+-----
 
----
+## Skills Demonstrated
 
-### **2.2 Technology Choices & Justifications**
+### 1\. Algorithm Design & Implementation
 
-#### **FastAPI**
+Implemented custom computational geometry algorithms to solve the coverage path planning problem.
 
-* Lightweight and extremely fast
-* Excellent Pydantic validation
-* Auto-generated OpenAPI docs
-* Seamless async middleware for logging
-* Perfect for assignment-sized backend projects
+  * **Details:** Boustrophedon paths, rectangle merging, interval operations, collision detection.
+  * **Key File:** `src/wall_done_planner.py`
 
-#### **SQLite**
+### 2\. Backend Development
 
-* Serves assignment/local development needs
-* Requires no deployment overhead
-* SQLAlchemy integrates cleanly
-* JSON support allows dynamic structures
+Architected a scalable REST API using modern Python standards.
 
-#### **SQLAlchemy**
+  * **Details:** Dependency injection, middleware (logging/CORS), error handling, and database session management.
+  * **Key Files:** `src/app.py`, `src/routers.py`
 
-* Provides ORM models
-* Clean table creation and dependency injection
-* Safer than raw SQL
+### 3\. Database Engineering
 
-#### **Pydantic v2**
+Designed a schema capable of handling both structured metadata and semi-structured spatial data.
 
-* Clear data validation for request/response
-* Enforces input constraints early
-* Ensures clean output formatting
+  * **Details:** SQLAlchemy ORM modeling, JSON type usage for waypoints, schema migrations.
+  * **Key File:** `src/database.py`
 
-#### **Custom Planner**
+### 4\. API Design
 
-* Required because no library supports wall coverage planning
-* The boustrophedon algorithm is ideal for structured coverage
-* Simple, deterministic, and easy to validate
+Created a strict contract between frontend and backend.
 
----
+  * **Details:** Pydantic schemas for request/response validation, OpenAPI/Swagger documentation, versioning.
+  * **Key File:** `src/schema.py`
 
-### **2.3 System Design Decisions**
+### 5\. Frontend Development
 
-#### **Planner Structure**
+Built a lightweight, dependency-free visualization tool.
 
-I designed the planner with clearly separated concerns:
+  * **Details:** Cartesian-to-canvas coordinate transformation, animation loops, async data fetching.
+  * **Key Files:** `static/script.js`, `static/index.html`
 
-1. **Obstacle Preprocessing**
+### 6\. Testing
 
-    * Inflate by safe margin
-    * Clip to wall boundaries
-    * Merge overlapping rectangles
+Ensured reliability through automated testing.
 
-2. **Lane Generation**
+  * **Details:** Integration testing with FastAPI TestClient to validate endpoints and logic.
+  * **Key File:** `test/test_api.py`
 
-    * Vertical or horizontal
-    * Based on tool width & overlap
+-----
 
-3. **Interval Subtraction**
+## Installation & Setup
 
-    * Project forbidden rectangles onto lanes
-    * Subtract to obtain free segments
+### Prerequisites
 
-4. **Waypoint Generation**
+  * Python 3.9+
+  * pip or poetry
 
-    * Discretize each segment
-    * Add transitions
-    * Compute headings
+### Quick Start
 
-This structure makes the planner testable and easy to reason about.
+1.  **Clone the repository**
 
----
+    ```bash
+    git clone https://github.com/yourusername/robopath.git
+    cd robopath
+    ```
 
-#### **Database Schema**
+2.  **Create virtual environment**
 
-I chose a **single-table JSON-based schema** for this assignment to keep things simple:
+    ```bash
+    python -m venv venv
+    # Linux/Mac:
+    source venv/bin/activate
+    # Windows:
+    # venv\Scripts\activate
+    ```
 
-* `trajectory`
+3.  **Install dependencies**
 
-  * wall dimensions
-  * obstacles
-  * planner parameters
-  * forbidden rectangles
-  * waypoints
-  * metadata (coverage, path length, etc.)
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-Reasons:
+4.  **Run the application**
 
-* JSON fields remove the need for multiple joins
-* Easy to convert from/to Pydantic models
-* Perfect fit for demo-level application
-* Respects assignment’s simplicity requirement
+    ```bash
+    uvicorn src.app:app --reload
+    ```
 
----
+5.  **Access the application**
 
-#### **API Design**
+      * Web Interface: `http://localhost:8000`
+      * API Documentation: `http://localhost:8000/docs`
 
-Endpoints:
+### Running Tests
 
-* `POST /api/trajectories` → run planner + store trajectory
-* `GET /api/trajectories` → list trajectories
-* `GET /api/trajectories/{id}` → fetch trajectory
-
-This API surface is clean, minimal, and covers all required functionality.
-
----
-
-#### **Error Handling**
-
-I included strong error handling:
-
-* Planner configuration errors
-* Collision detection
-* DB errors
-* Invalid inputs
-
-This ensures robustness even under malformed input.
-
----
-
-#### **Logging Middleware**
-
-Each request logs:
-
-* Path
-* Method
-* Status code
-* Time taken
-
-This provides observability and is helpful for debugging planner performance.
-
----
-
-## **3. Implementation Breakdown**
-
-### **3.1 Project Structure**
-
-```
-src/
-  app.py
-  routers.py
-  database.py
-  schema.py
-  wall_done_planner.py
-static/
-test/
-requirements.txt
-README.md
+```bash
+pytest test/ -v
 ```
 
-Each file has a specific and isolated purpose.
+-----
 
----
+## Usage Examples
 
-### **3.2 Planner Implementation**
+### Web Interface
 
-I implemented the planner in `wall_done_planner.py` following these steps:
+1.  Navigate to the local host URL.
+2.  Input wall dimensions and tool parameters.
+3.  Add obstacles via the "Add Obstacle" button.
+4.  Click "Generate Trajectory" and use the playback controls to view the path.
 
-#### **1. Obstacle Processing**
+### API Usage
 
-* Inflate each obstacle
-* Clip to wall
-* Merge overlapping blocks
+**Create a Trajectory:**
 
-#### **2. Lane Planning**
+```bash
+curl -X POST "http://localhost:8000/api/trajectories/" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_name": "Kitchen Wall",
+    "wall": {"width": 5.0, "height": 3.0},
+    "obstacles": [
+      {"x": 1.0, "y": 1.0, "width": 0.5, "height": 0.5}
+    ],
+    "planner_params": {
+      "tool_width": 0.5,
+      "overlap": 0.1,
+      "safe_margin": 0.1,
+      "orientation": "auto"
+    }
+  }'
+```
 
-* Compute lane spacing
-* Generate vertical or horizontal lanes
+**List Trajectories:**
 
-#### **3. Free Interval Computation**
+```bash
+curl "http://localhost:8000/api/trajectories/?limit=10"
+```
 
-* Project forbidden rectangles onto each lane
-* Subtract intervals using standard DSA interval subtraction
+**Get Single Trajectory:**
 
-#### **4. Segment Assembly**
+```bash
+curl "http://localhost:8000/api/trajectories/1"
+```
 
-* Order segments in boustrophedon sequence
-* Alternate direction for efficient coverage
+-----
 
-#### **5. Waypoint Construction**
+## Algorithm Details
 
-* Discretize segments
-* Insert transitions
-* Compute orientations
+The planner implements a boustrophedon (lawnmower) pattern optimized for rectangular surfaces. The process follows these steps:
 
-#### **6. Collision Check**
+1.  **Obstacle Preprocessing:** Inflates obstacles by the safety margin, clips them to wall boundaries, and merges overlapping rectangles to simplify geometry.
+2.  **Lane Generation:** Calculates lane spacing based on `tool_width * (1 - overlap)`.
+3.  **Free Interval Computation:** Projects obstacles onto each lane and uses interval subtraction to identify free path segments.
+4.  **Path Assembly:** Alternates lane direction, discretizes segments, and adds transition waypoints between lanes.
+5.  **Validation:** Performs final collision checks against forbidden zones and calculates coverage metrics.
 
-* Verify no waypoint lies inside forbidden rects
+**Time Complexity:** O(N log N + L×N) where N is the number of obstacles and L is the number of lanes.
 
-#### **7. Metadata Generation**
+-----
 
-* Path length
-* Coverage estimate
-* Warnings (if any)
+## Database Schema
 
----
+```sql
+CREATE TABLE trajectories (
+    id INTEGER PRIMARY KEY,
+    job_name VARCHAR,
+    created_at DATETIME,
+    updated_at DATETIME,
 
-### **3.3 Router Implementation**
+    -- Wall configuration
+    wall_width FLOAT NOT NULL,
+    wall_height FLOAT NOT NULL,
 
-The router exposes the planner via FastAPI:
+    -- Inputs (JSON)
+    obstacles JSON NOT NULL,
+    planner_params JSON NOT NULL,
 
-1. Validate request
-2. Run planner
-3. Serialize output
-4. Store in DB
-5. Return Pydantic response object
+    -- Outputs (JSON)
+    forbidden_rects JSON NOT NULL,
+    waypoints JSON NOT NULL,
+    meta JSON NOT NULL,
 
-I also added pagination in the list route and standardized error messages.
+    -- Status tracking
+    status VARCHAR DEFAULT 'completed',
+    error_message VARCHAR
+);
+```
 
----
+## Author
 
-### **3.4 Database Implementation**
+**Your Name**
 
-Using SQLAlchemy ORM:
-
-* Created `TrajectoryDB` table
-* JSON fields store planner outputs
-* UTC timestamps for auditability
-* Dependency-injected DB session
-* Auto-table creation for SQLite
-
----
-
-### **3.5 Testing & Verification**
-
-I validated correctness by:
-
-* Running planner on walls without obstacles
-* Running planner on walls with central obstacles
-* Verifying that:
-
-  * lanes are split correctly
-  * waypoints are ordered
-  * no collisions occur
-  * path length is reasonable
-* Manually reviewing DB entries
-* Checking JSON shape against Pydantic models
-
----
-
-## **4. Final Outcome**
-
-### **4.1 What the System Supports**
-
-* Full planner execution
-* Clean API for submission & retrieval
-* JSON-based trajectory storage
-* Logging & observability
-* Modular architecture ready for extension
-
----
-
-### **4.2 API Summary**
-
-#### **POST /api/trajectories**
-
-* Input: wall, obstacles, planner parameters
-* Output: full trajectory
-
-#### **GET /api/trajectories**
-
-* Returns list of trajectories with pagination
-
-#### **GET /api/trajectories/{id}**
-
-* Returns one trajectory by ID
-
----
-
-### **4.3 Performance & Scalability Considerations**
-
-* SQLite is sufficient for assignment scale
-* Planner is deterministic and runs in O(N log N + lanes*N)
-* JSON fields reduce joins and speed up development
-* Router and middleware are async-friendly
-
-For production:
-
-* Switch to PostgreSQL
-* Add caching for repeated planner runs
-* Use background tasks for large walls
-
----
-
-### **4.4 Future Improvements**
-
-* Add concurrency-friendly task runner (Celery/RQ)
-* Add visualization endpoint
-* Introduce obstacle validation tools
-* Add path smoothing for smoother robot motion
-* Expose more planner configurations
-* Add versioning for planner algorithms
-
----
-
-## **Conclusion**
-
-This project demonstrates:
-
-* Problem interpretation
-* Structured breakdown of requirements
-* Clean system architecture
-* Robust planning algorithm
-* Strong backend engineering discipline
-
-The final system is modular, extensible, and easy to maintain, while remaining minimal and focused—aligned with the expectations of the assignment.
+  * GitHub: [@sgwrld](https://github.com/sgwrld-999)
+  * LinkedIn: [worksiddhantgond]([https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/worksiddhantgond/)
