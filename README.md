@@ -284,7 +284,7 @@ CREATE TABLE trajectories (
 
 ## Author
 
-**Your Name**
+**Siddhant Gond**
 
   * GitHub: [@sgwrld](https://github.com/sgwrld-999)
   * LinkedIn: [worksiddhantgond]([https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/worksiddhantgond/)
